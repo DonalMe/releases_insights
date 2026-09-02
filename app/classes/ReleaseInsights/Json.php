@@ -77,23 +77,31 @@ class Json
     public static function load(string $url, int $ttl = 0): array
     {
         if (! $data = Cache::getKey($url, $ttl)) {
-            $data = Utils::getFile($url);
+            // $status carries the HTTP status code so that callers can tell the
+            // user *why* an external resource didn't provide data (429, 406…).
+            $data = Utils::getFile($url, $status);
+
+            /**
+             * @param array<string, string> $error
+             * @return array<string, string|int>
+             */
+            $fail = fn(array $error): array => $status === null ? $error : [...$error, 'status' => $status];
 
             // Error fetching external data, don't cache. Safety net
             // @codeCoverageIgnoreStart
             if ($data === false) {
-                return ['error' => 'URL triggered an error'];
+                return $fail(['error' => 'URL triggered an error']);
             }
             // @codeCoverageIgnoreEnd
 
             // No data returned, bug or incorrect data, don't cache.
             if (empty($data)) {
-                return ['error' => 'URL provided no data'];
+                return $fail(['error' => 'URL provided no data']);
             }
 
             // Invalid Json, don't cache.
             if (! json_validate($data)) {
-                return ['error' => 'Invalid JSON source'];
+                return $fail(['error' => 'Invalid JSON source']);
             }
 
             Cache::setKey($url, $data, $ttl);

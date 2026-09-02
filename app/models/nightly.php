@@ -125,7 +125,8 @@ if ($days_elapsed < 10) {
         $sig = $crashes['facets']['signature'] ?? null;
 
         if (is_null($build_crashes[$dataset['buildid']]) || ! is_array($sig)) {
-            $warnings[] = 'Socorro is not providing crash data';
+            $warnings[] = 'Socorro is not providing crash data'
+                . Utils::httpStatusLabel($crashes['status'] ?? null);
             continue;
         }
 
@@ -185,7 +186,8 @@ foreach ($nightly_pairs as $dataset) {
         the build in the list with its push log link but without bug details.
      */
     if (! isset($bug_list_details['bugs']) || ! is_array($bug_list_details['bugs'])) {
-        $warnings[] = 'Bugzilla is not providing bug details';
+        $warnings[] = 'Bugzilla is not providing bug details'
+            . Utils::httpStatusLabel($bug_list_details['status'] ?? null);
         $bug_list[$dataset['buildid']] = [
             'bugs'  => null,
             'url'   => $url,

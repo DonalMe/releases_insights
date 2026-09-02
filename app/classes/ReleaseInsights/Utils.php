@@ -173,10 +173,32 @@ class Utils
     }
 
     /**
-     * getFile code coverage is done through its main consumer Json::load()
+     * Human readable suffix describing why an HTTP request failed, meant to be
+     * appended to a user facing warning message.
+     *
+     * @param ?int $status HTTP status code, 0 if we got no response at all,
+     *                     null if the resource was not fetched over HTTP
      */
-    public static function getFile(string $url): string|bool
+    public static function httpStatusLabel(?int $status): string
     {
+        return match (true) {
+            $status === null => '',
+            $status === 0    => ' (no response)',
+            default          => " (HTTP {$status})",
+        };
+    }
+
+    /**
+     * getFile code coverage is done through its main consumer Json::load()
+     *
+     * @param ?int $status Set by reference to the HTTP status code of the
+     *                     request, 0 if we got no response at all and null for
+     *                     local files, so that callers can report the reason.
+     */
+    public static function getFile(string $url, ?int &$status = null): string|bool
+    {
+        $status = null;
+
         // Local file
         if ((Uri::parse($url)?->getScheme()) === null) {
             // Does it exist ?
