@@ -3,9 +3,8 @@
 declare(strict_types=1);
 
 use Cache\Cache;
-use GuzzleHttp\Client;
 use GuzzleHttp\Promise\Utils as Promise;
-use ReleaseInsights\{Bugzilla, Data, IOS, Json, Nightly, Release, URL, Version};
+use ReleaseInsights\{Bugzilla, Data, IOS, Json, Nightly, Release, URL, Utils, Version};
 
 // Get requested version first — uses pre-loaded constants only, no HTTP
 $requested_version = Version::get();
@@ -78,9 +77,7 @@ if (! defined('TESTING_CONTEXT')) {
     }
 
     if (! empty($_to_prefetch)) {
-        $_client = new Client([
-            'headers' => ['User-Agent' => 'WhatTrainIsItNow/1.0', 'Referer' => 'https://whattrainisitnow.com'],
-        ]);
+        $_client = Utils::httpClient();
         $_promises = [];
         foreach ($_to_prefetch as $_url => $_) {
             $_promises[$_url] = $_client->getAsync($_url, ['http_errors' => false]);

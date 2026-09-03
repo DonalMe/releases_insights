@@ -26,7 +26,7 @@ class Nightly
             // The JSON file only exists when updates are stopped.
             // If there is no file at the URL, it means that automatic updates are enabled.
             $this->auto_updates = str_contains(
-                (string) get_headers($this->AUS . $this->update_status)[0],
+                (string) (Utils::getHeaders($this->AUS . $this->update_status)[0] ?? ''),
                 '404'
             );
         }

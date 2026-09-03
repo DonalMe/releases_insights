@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace ReleaseInsights;
 
-use GuzzleHttp\Client;
 use GuzzleHttp\Promise\Utils as Promise;
 
 use Cache\Cache;
@@ -43,11 +42,12 @@ class Beta
                 // @codeCoverageIgnoreStart
                 $cache_key = 'beta_cycle_ended_' . $this->release;
                 if (($cached = Cache::getKey($cache_key, 900)) === false) {
-                    $http_code = get_headers(
+                    $http_code = Utils::getHeaders(
                         URL::Mercurial->value . 'releases/mozilla-beta/json-pushes?fromchange=' . 'FIREFOX_BETA_' . $this->release . '_END'
                     );
-                    $http_code = array_filter($http_code, fn($v) => str_starts_with($v, 'HTTP/'));
-                    $http_code = end($http_code); // We want the last HTTP code to workaround the hg-edge 302 redirect
+                    $http_code = array_filter($http_code, fn($v) => str_starts_with((string) $v, 'HTTP/'));
+                    // We want the last HTTP code to workaround the hg-edge 302 redirect
+                    $http_code = (string) end($http_code);
                     $cached = str_contains($http_code, '200') ? 'true' : 'false';
                     Cache::setKey($cache_key, $cached, 900);
                 }
@@ -168,7 +168,7 @@ class Beta
         }
 
         // Fetch cache misses in parallel
-        $client = new Client(['base_uri' => URL::Mercurial->value]);
+        $client = Utils::httpClient(['base_uri' => URL::Mercurial->value]);
         $promises = [];
         foreach ($to_fetch as $beta => ['query' => $query]) {
             $promises[$beta] = $client->getAsync($query, ['http_errors' => false]);
@@ -274,7 +274,7 @@ class Beta
             } else {
                 // @codeCoverageIgnoreStart
                 // Fetch all cache misses in parallel
-                $client = new Client(['headers' => ['User-Agent' => 'WhatTrainIsItNow/1.0']]);
+                $client = Utils::httpClient();
                 $promises = [];
                 foreach ($to_fetch as $version => $url) {
                     $promises[$version] = $client->getAsync($url, ['http_errors' => false]);
@@ -351,8 +351,8 @@ class Beta
             $to = 'FIREFOX_' . $this->release . '_0_BUILD' . $i;
 
             $url = URL::Mercurial->value . 'releases/mozilla-release/json-pushes?fromchange=' . $from . '&tochange=' . $to;
-            $headers = get_headers($url);
-            $headers = array_filter((array) $headers, fn($v) => str_starts_with($v, 'HTTP/'));
+            $headers = Utils::getHeaders($url);
+            $headers = array_filter($headers, fn($v) => str_starts_with((string) $v, 'HTTP/'));
             $http_code = (string) end($headers); // Last code to handle hg-edge 302 redirects
 
             if (str_contains($http_code, '200')) {

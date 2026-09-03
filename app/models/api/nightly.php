@@ -11,8 +11,8 @@ $options = [
     'http' => [
         'method'  => 'POST',
         'header'  =>   "Content-Type: application/json\r\n"
-                     . "User-Agent: WhatTrainIsItNow/1.0\r\n"
-                     . "Referer: https://whattrainisitnow.com",
+                     . 'User-Agent: ' . Utils::USER_AGENT . "\r\n"
+                     . 'Referer: ' . Utils::REFERER,
         // Don't turn an HTTP error (406, 429…) into a `false` return value and
         // don't let a stalled Buildhub hang the whole page.
         'ignore_errors' => true,

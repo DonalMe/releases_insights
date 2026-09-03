@@ -13,6 +13,79 @@ use Uri\Rfc3986\Uri;
 class Utils
 {
     /**
+     * All our external requests must be identifiable by the sites we query,
+     * several of them (Bugzilla, Socorro, hg.mozilla.org) throttle or reject
+     * anonymous traffic. Never make an outbound request without these.
+     */
+    public const string USER_AGENT = 'WhatTrainIsItNow/1.0';
+    public const string REFERER    = 'https://whattrainisitnow.com';
+
+    /**
+     * Our default headers, for requests we don't make through httpClient().
+     *
+     * @return array<string, string>
+     */
+    public static function httpHeaders(): array
+    {
+        return [
+            'User-Agent' => self::USER_AGENT,
+            'Referer'    => self::REFERER,
+        ];
+    }
+
+    /**
+     * A Guzzle client carrying our User-Agent. Always build clients with this
+     * instead of instantiating Client directly.
+     *
+     * @param array<string, mixed> $config Extra Guzzle config, its 'headers'
+     *                                     entry is merged over our defaults.
+     */
+    public static function httpClient(array $config = []): Client
+    {
+        $headers = is_array($config['headers'] ?? null) ? $config['headers'] : [];
+        $config['headers'] = [...self::httpHeaders(), ...$headers];
+
+        return new Client($config);
+    }
+
+    /**
+     * A stream context carrying our User-Agent, for the stream based functions
+     * (get_headers(), file_get_contents()) which send no User-Agent at all.
+     *
+     * @param array<string, mixed> $http Extra 'http' stream context options
+     */
+    public static function streamContext(array $http = []): mixed
+    {
+        $header = '';
+        foreach (self::httpHeaders() as $name => $value) {
+            $header .= "{$name}: {$value}\r\n";
+        }
+
+        return stream_context_create([
+            'http' => [
+                'header'  => $header,
+                'timeout' => 15,
+                ...$http,
+            ],
+        ]);
+    }
+
+    /**
+     * get_headers() with our User-Agent. Returns an empty array instead of
+     * false when the host doesn't answer at all.
+     *
+     * @return array<int|string, string|array<string>>
+     */
+    public static function getHeaders(string $url): array
+    {
+        // @codeCoverageIgnoreStart
+        $headers = @get_headers($url, context: self::streamContext());
+
+        return $headers === false ? [] : $headers;
+        // @codeCoverageIgnoreEnd
+    }
+
+    /**
      * Get the list of crashes for a Build ID from Socorro
      *
      * @param int $buildid Firefox build ID
@@ -211,12 +284,7 @@ class Utils
 
         // We don't want to make external requests in Unit Tests
         // @codeCoverageIgnoreStart
-        $client = new Client([
-            'headers' => [
-                'User-Agent' => 'WhatTrainIsItNow/1.0',
-                'Referer'    => 'https://whattrainisitnow.com'
-            ]
-        ]);
+        $client = self::httpClient();
 
         // We know that some queries fail for hg.mozilla.org but we deal with that in templates
         // We ignore warnings for 404 errors as we don't want to spam Sentry

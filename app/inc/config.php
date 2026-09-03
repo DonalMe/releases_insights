@@ -32,6 +32,11 @@ define('CACHE_TIME', 900); // 15 minutes
 // Autoloading of classes (both /vendor/ and /app/classes)
 require_once INSTALL_ROOT . 'vendor/autoload.php';
 
+// PHP sends no User-Agent at all on stream based requests. Set ours as the
+// default so that anything we didn't route through Utils::httpClient() or
+// Utils::streamContext() is still identifiable by the sites we query.
+ini_set('user_agent', ReleaseInsights\Utils::USER_AGENT);
+
 // Get Firefox Versions from Product Details library, default cache duration
 $firefox_versions = new Data()->getFirefoxVersions();
 

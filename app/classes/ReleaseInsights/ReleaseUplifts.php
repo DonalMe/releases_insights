@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace ReleaseInsights;
 
 use Cache\Cache;
-use GuzzleHttp\Client;
 use GuzzleHttp\Promise\Utils as Promise;
 use ReleaseInsights\Bugzilla;
 use ReleaseInsights\Data;
@@ -153,7 +152,7 @@ readonly class ReleaseUplifts
                 }
             } else {
                 // @codeCoverageIgnoreStart
-                $client = new Client(['headers' => ['User-Agent' => 'WhatTrainIsItNow/1.0']]);
+                $client = Utils::httpClient();
                 $promises = [];
                 foreach ($to_fetch as $version => $url) {
                     $promises[$version] = $client->getAsync($url, ['http_errors' => false]);
