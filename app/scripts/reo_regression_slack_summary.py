@@ -91,6 +91,16 @@ CLASSIFICATIONS = [
 HIGH_SEVERITIES = ("S1", "S2")
 MISSING_SEVERITIES = ("--",)
 
+# Products dropped from every query, so their bugs reach neither message and no
+# bucket in them.
+# Excluded at the query rather than per bucket, so a product here is out of the
+# cycle summary, all the daily buckets and the burndown lines alike.
+EXCLUDED_PRODUCTS = ("Testing", "Developer Infrastructure")
+
+# Where the product exclusions are numbered from in a boolean chart. Above every
+# slot either query uses, including the 11 with_severities takes.
+EXCLUDED_PRODUCTS_SLOT = 12
+
 # Bugzilla's placeholder assignee: the bug sits in a component, but nobody has
 # taken it on. Components with a real default assignee are left out of this, so
 # a bug parked on a triage owner counts as assigned.
@@ -280,7 +290,7 @@ def regressions_query(version: int, carry_over: bool | None = None) -> dict:
     Bugs with any of the following are ignored:
     - tracking-firefox{version} is -
     - stalled or intermittent-failure keywords
-    - within the Testing product
+    - within one of EXCLUDED_PRODUCTS
 
     carry_over adds a condition on the previous version, splitting that set in
     two. False keeps the bugs where status-firefox{version - 1} is one of
@@ -291,8 +301,9 @@ def regressions_query(version: int, carry_over: bool | None = None) -> dict:
 
     Field numbering is Bugzilla's boolean charts: f/o/v are the field, operator
     and value for a numbered condition, OP and CP open and close a group, j sets
-    how a group joins (OR here, AND otherwise) and n negates. The gap at f7 comes
-    from bugdash and is harmless, as Bugzilla ignores unused numbers.
+    how a group joins (OR here, AND otherwise) and n negates. The gaps at f7 and
+    f9 are harmless, as Bugzilla ignores unused numbers: f7 comes from bugdash,
+    f9 from the product exclusions moving to EXCLUDED_PRODUCTS_SLOT.
     """
     query = {
         "classification": CLASSIFICATIONS,
@@ -305,12 +316,10 @@ def regressions_query(version: int, carry_over: bool | None = None) -> dict:
         "f8": f"cf_tracking_firefox{version}",
         "o8": "notequals",
         "v8": "-",
-        "f9": "product",
-        "o9": "notequals",
-        "v9": "Testing",
         "f10": "keywords",
         "o10": "nowordssubstr",
         "v10": "stalled,intermittent-failure",
+        **without_excluded_products(),
     }
 
     if carry_over is None:
@@ -354,12 +363,13 @@ def burndown_query(version: int, uplift_flag: str) -> dict:
       - in a security group
       - tracking-firefox{version} is +, ? or blocking
     Bugs with any of the following are ignored:
-    - within the Testing product
+    - within one of EXCLUDED_PRODUCTS
     - an uplift request against the channel, in any state
 
     All but the last of those is bugdash's Burndown list, kept in step with
     app/buglists/burndown.mjs there. Its numbering gaps at f5, f8 and f10 are
-    copied along with the rest, as Bugzilla ignores unused numbers.
+    copied along with the rest, as Bugzilla ignores unused numbers, and f9 is
+    free now the product exclusions live at EXCLUDED_PRODUCTS_SLOT.
 
     The uplift request is a flag on an attachment, and the only way a bug search
     will report those is to send back every attachment with it, so it is left to
@@ -386,14 +396,32 @@ def burndown_query(version: int, uplift_flag: str) -> dict:
         "o6": "anywordssubstr",
         "v6": "+ ? blocking",
         "f7": "CP",
-        "f9": "product",
-        "o9": "notequals",
-        "v9": "Testing",
         "f11": "flagtypes.name",
         "o11": "substring",
         "v11": uplift_flag,
         "n11": "1",
+        **without_excluded_products(),
     }
+
+
+def without_excluded_products(slot: int = EXCLUDED_PRODUCTS_SLOT) -> dict:
+    """
+    Chart conditions dropping EXCLUDED_PRODUCTS, a numbered slot per product.
+
+    One ANDed notequals per product rather than a single nowords: Bugzilla splits
+    a nowords value on whitespace, so "Developer Infrastructure" would be matched
+    as the two words separately and drop products nobody asked to exclude.
+    """
+    conditions: dict = {}
+    for offset, product in enumerate(EXCLUDED_PRODUCTS):
+        number = slot + offset
+        conditions |= {
+            f"f{number}": "product",
+            f"o{number}": "notequals",
+            f"v{number}": product,
+        }
+
+    return conditions
 
 
 def with_severities(query: dict, severities: tuple[str, ...]) -> dict:
