@@ -125,6 +125,18 @@
           {% endif %}
         </h3>
     {% endif %}
+    {% if merged_beta and merged_beta.beta_1 and date(merged_beta.beta_1) >= date('today') %}
+        <h3 class="text-center">Firefox {{ merged_beta.version }} has merged to Beta, Beta 1 ships on {{ merged_beta.beta_1|format_date(pattern='MMMM d') }}
+          {% set leftDays = date(merged_beta.beta_1).diff(date('today')).days %}
+          {% if leftDays == 0 %}
+            <small>(today)</small>
+          {% elseif leftDays == 1 %}
+            <small>(in 1 day)</small>
+          {% else %}
+            <small>(in {{ leftDays }} days)</small>
+          {% endif %}
+        </h3>
+    {% endif %}
 {% endif %}
 
   {% if merge_day %}

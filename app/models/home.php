@@ -56,6 +56,17 @@ $latest_nightly = Json::load(
 $beta_version = new Version(FIREFOX_BETA)->int;
 $beta_is_the_next_ESR = $beta_version == (int) ESR::getVersion($beta_version);
 
+// On the 2-week cycle the next version merges to Beta a few days before its
+// Beta 1 ships, so product-details still reports the previous beta until then.
+$merged_beta = null;
+if (NIGHTLY - BETA === 2) {
+    $requested_version = (string) (NIGHTLY - 1) . '.0';
+    $merged_beta = [
+        'version' => NIGHTLY - 1,
+        'beta_1'  => (include MODELS . 'api/release_schedule.php')['beta_1'] ?? null,
+    ];
+}
+
 /* Only for the current Nightly view, this makes an HTTP request */
 $nightly_state = new Nightly();
 $nightly_emergency_message = Bugzilla::linkify($nightly_state->emergency_message);
@@ -71,4 +82,5 @@ return [
     $beta_is_the_next_ESR,
     $nightly_state->auto_updates,
     $nightly_emergency_message,
+    $merged_beta,
 ];

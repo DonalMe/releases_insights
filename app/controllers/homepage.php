@@ -15,6 +15,7 @@ use ReleaseInsights\{Model, Template};
     $beta_is_the_next_ESR,
     $nightly_auto_updates,
     $nightly_emergency_message,
+    $merged_beta,
 ] = new Model('home')->get();
 
 
@@ -33,5 +34,6 @@ new Template(
         'beta_is_the_next_ESR'   => $beta_is_the_next_ESR,
         'nightly_auto_updates'   => $nightly_auto_updates,
         'nightly_emergency'      => $nightly_emergency_message,
+        'merged_beta'            => $merged_beta,
     ]
 )->render();
